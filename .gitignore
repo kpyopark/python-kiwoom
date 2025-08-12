@@ -29,3 +29,6 @@ Thumbs.db
 
 # Kiwoom specific files
 키움 REST API 문서.pdf
+
+# MCP server related files
+fetch-mcp/

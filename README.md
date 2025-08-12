@@ -30,3 +30,27 @@ To run the example demonstrating authentication and stock information retrieval:
 ## Kiwoom REST API Documentation
 
 This project is designed to automate interactions based on the official Kiwoom REST API documentation. The `키움 REST API 문서.pdf` file, which can be downloaded from the Kiwoom website, is placed in the root directory of this project. This document serves as the primary reference for automating various API functionalities through this wrapper.
+
+## Cline MCP Servers
+
+Cline is configured with several Model Context Protocol (MCP) servers to extend its capabilities and facilitate various development tasks. Below is a list of the installed MCP servers, their installation methods, and their primary purposes:
+
+### 1. `github.com/AgentDeskAI/browser-tools-mcp`
+
+*   **Installation Method:** `npx @agentdeskai/browser-tools-mcp@latest`
+*   **Purpose:** Provides tools for browser interaction, including taking screenshots, retrieving console logs, and running various audits (accessibility, performance, SEO, best practices). This server enables automated browser testing and web application analysis.
+
+### 2. `github.com/modelcontextprotocol/servers/tree/main/src/sequentialthinking`
+
+*   **Installation Method:** `npx -y @modelcontextprotocol/server-sequential-thinking`
+*   **Purpose:** Offers a `sequentialthinking` tool designed for dynamic and reflective problem-solving. It helps in breaking down complex problems, planning solutions, and adapting strategies through a structured thought process.
+
+### 3. `github.com/zcaceres/fetch-mcp`
+
+*   **Installation Method:** `node /home/postgres/devel/python-kiwoom/fetch-mcp/dist/index.js`
+*   **Purpose:** Provides tools to fetch content from URLs in various formats (HTML, Markdown, plain text, JSON). This is useful for retrieving and processing web content for analysis or integration.
+
+### 4. `github`
+
+*   **Installation Method:** `docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN -e GITHUB_TOOLSETS=repos,issues,pull_requests,actions,code_security,experiments ghcr.io/github/github-mcp-server`
+*   **Purpose:** Enables comprehensive interaction with GitHub repositories. It provides tools for managing issues, pull requests, branches, commits, and workflows, allowing for automated Git operations and repository management.
