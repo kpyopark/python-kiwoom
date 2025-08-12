@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+dist/
+build/
+
+# Environment variables
+.env
+
+# uv lock file (often committed, but excluding for now as per common practice for generated files)
+uv.lock
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Kiwoom specific files
+키움 REST API 문서.pdf
