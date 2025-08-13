@@ -13,7 +13,7 @@ import httpx
 import websockets
 from pydantic import ValidationError
 
-from .exceptions import KiwoomAPIError, WebSocketError
+from .exceptions import KiwoomAPIError, WebSocketError, AuthenticationError
 from .models import BaseKiwoomResponse, PaginatedResponse # Changed APIResponse to BaseKiwoomResponse
 
 T = TypeVar("T")
@@ -142,3 +142,84 @@ class KiwoomBaseClient:
                         raise WebSocketError("Connection closed.")
         except Exception as e:
             raise WebSocketError(f"WebSocket connection failed: {e}") from e
+
+
+class AuthenticatedKiwoomBaseClient(KiwoomBaseClient):
+    """
+    A base client for authenticated Kiwoom API interactions.
+    Manages access token and provides authenticated request methods.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        client: httpx.AsyncClient,
+        websocket_url: str,
+        access_token: Optional[str] = None,
+    ):
+        super().__init__(base_url, client, websocket_url)
+        self._access_token = access_token
+
+    @property
+    def access_token(self) -> Optional[str]:
+        return self._access_token
+
+    @access_token.setter
+    def access_token(self, token: str):
+        self._access_token = token
+
+    @property
+    def _auth_headers(self) -> dict:
+        if not self._access_token:
+            raise AuthenticationError("Access token is not set.")
+        return {
+            "authorization": f"Bearer {self._access_token}",
+        }
+
+    async def _authenticated_request(
+        self,
+        method: str,
+        path: str,
+        response_model: Type[T],
+        params: Optional[Dict[str, Any]] = None,
+        data: Optional[Dict[str, Any]] = None,
+        json: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> T:
+        """
+        Sends an authenticated HTTP request.
+        Automatically adds authentication headers.
+        """
+        combined_headers = {**self._auth_headers, **(headers or {})}
+        return await self._request(
+            method,
+            path,
+            response_model,
+            params=params,
+            data=data,
+            json=json,
+            headers=combined_headers,
+        )
+
+    async def _authenticated_get(
+        self,
+        path: str,
+        response_model: Type[T],
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> T:
+        return await self._authenticated_request(
+            "GET", path, response_model, params=params, headers=headers
+        )
+
+    async def _authenticated_post(
+        self,
+        path: str,
+        response_model: Type[T],
+        data: Optional[Dict[str, Any]] = None,
+        json: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> T:
+        return await self._authenticated_request(
+            "POST", path, response_model, data=data, json=json, headers=headers
+        )

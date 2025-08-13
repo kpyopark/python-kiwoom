@@ -11,23 +11,25 @@ import httpx
 from httpx import Response
 from pytest_mock import MockerFixture
 
-from kiwoom.core import KiwoomBaseClient
+from kiwoom.client import KiwoomClient
 from kiwoom.exceptions import KiwoomAPIError
 from kiwoom.stock_information.client import StockInformationClient
 from kiwoom.stock_information.models import StockInfo
 
 @pytest.fixture
-def mock_core_client(mocker: MockerFixture):
-    """Fixture to mock KiwoomBaseClient."""
-    return mocker.MagicMock(spec=KiwoomBaseClient)
+def mock_kiwoom_client(mocker: MockerFixture):
+    """Fixture to mock KiwoomClient."""
+    mock_client = mocker.MagicMock(spec=KiwoomClient)
+    mock_client.access_token = "test_token" # Set a dummy access token for _auth_headers
+    return mock_client
 
 @pytest.fixture
-def stock_info_client(mock_core_client: KiwoomBaseClient):
+def stock_info_client(mock_kiwoom_client: KiwoomClient):
     """Fixture to create a StockInformationClient instance."""
-    return StockInformationClient(core_client=mock_core_client, access_token="test_token")
+    return StockInformationClient(client=mock_kiwoom_client)
 
 @pytest.mark.asyncio
-async def test_get_stock_basic_info_success(stock_info_client: StockInformationClient, mock_core_client: KiwoomBaseClient):
+async def test_get_stock_basic_info_success(stock_info_client: StockInformationClient, mock_kiwoom_client: KiwoomClient):
     """
     Test get_stock_basic_info with a successful API response.
     """
@@ -82,15 +84,15 @@ async def test_get_stock_basic_info_success(stock_info_client: StockInformationC
         "return_code": 0,
         "return_msg": "정상적으로 처리되었습니다"
     }
-    mock_core_client._post.return_value = StockInfo(**mock_response_data)
+    mock_kiwoom_client._authenticated_post.return_value = StockInfo(**mock_response_data)
 
     stock_code = "005930"
     response = await stock_info_client.get_stock_basic_info(stock_code)
 
-    mock_core_client._post.assert_called_once_with(
+    mock_kiwoom_client._authenticated_post.assert_called_once_with(
         "/api/dostk/stkinfo",
         response_model=StockInfo,
-        headers={"authorization": "Bearer test_token", "api-id": "ka10001"},
+        headers={"api-id": "ka10001"},
         json={"stk_cd": stock_code},
     )
     assert isinstance(response, StockInfo)
@@ -100,14 +102,14 @@ async def test_get_stock_basic_info_success(stock_info_client: StockInformationC
     assert response.message == "정상적으로 처리되었습니다"
 
 @pytest.mark.asyncio
-async def test_get_stock_basic_info_api_error(stock_info_client: StockInformationClient, mock_core_client: MockerFixture, mocker: MockerFixture):
+async def test_get_stock_basic_info_api_error(stock_info_client: StockInformationClient, mock_kiwoom_client: MockerFixture, mocker: MockerFixture):
     """
     Test get_stock_basic_info with an API error response.
     """
     mock_request = mocker.MagicMock(spec=httpx.Request)
     mock_request.url = "http://test.com/api/dostk/stkinfo" # Dummy URL
     mock_response = Response(status_code=400, request=mock_request)
-    mock_core_client._post.side_effect = KiwoomAPIError(
+    mock_kiwoom_client._authenticated_post.side_effect = KiwoomAPIError(
         response=mock_response, error_code=-1, error_message="잘못된 종목코드입니다."
     )
 
@@ -115,10 +117,10 @@ async def test_get_stock_basic_info_api_error(stock_info_client: StockInformatio
     with pytest.raises(KiwoomAPIError) as excinfo:
         await stock_info_client.get_stock_basic_info(stock_code)
 
-    mock_core_client._post.assert_called_once_with(
+    mock_kiwoom_client._authenticated_post.assert_called_once_with(
         "/api/dostk/stkinfo",
         response_model=StockInfo,
-        headers={"authorization": "Bearer test_token", "api-id": "ka10001"},
+        headers={"api-id": "ka10001"},
         json={"stk_cd": stock_code},
     )
     assert "잘못된 종목코드입니다." in str(excinfo.value)

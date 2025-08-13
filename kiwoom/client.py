@@ -12,13 +12,13 @@ from typing import Optional
 import httpx
 from dotenv import load_dotenv
 
-from .core import KiwoomBaseClient
+from .core import AuthenticatedKiwoomBaseClient
 from .exceptions import AuthenticationError
 from .models import AuthResponse
 from .stock_information.client import StockInformationClient
 
 
-class KiwoomClient:
+class KiwoomClient(AuthenticatedKiwoomBaseClient):
     """
     The main client for interacting with the Kiwoom API.
     """
@@ -52,37 +52,14 @@ class KiwoomClient:
                 "KIWOOM_API_SERVER_TYPE must be 'real' or 'mock'."
             )
 
-        self._access_token = access_token
-
         self._client = httpx.AsyncClient()
-        self.core = KiwoomBaseClient(
+        super().__init__(
             base_url=base_url,
             client=self._client,
             websocket_url=websocket_url,
+            access_token=access_token,
         )
-        self.stock_information = StockInformationClient(
-            core_client=self.core, access_token=self._access_token
-        )
-
-    @property
-    def _auth_headers(self) -> dict:
-        if not self._access_token:
-            raise AuthenticationError("Access token is not set.")
-        return {
-            "authorization": f"Bearer {self._access_token}",
-            "appkey": self.app_key,
-            "appsecret": self.app_secret,
-        }
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.close()
-
-    async def close(self):
-        """Closes the underlying HTTPX client."""
-        await self._client.aclose()
+        self.stock_information = StockInformationClient(client=self)
 
     async def fetch_access_token(self):
         """
@@ -95,13 +72,11 @@ class KiwoomClient:
             "secretkey": self.app_secret,
         }
 
-        auth_response = await self.core._post(
+        auth_response = await self._post(
             token_path, response_model=AuthResponse, json=data
         )
         if auth_response.return_code == 0 and auth_response.token:
-            self._access_token = auth_response.token
-            # Update access token for sub-clients
-            self.stock_information._access_token = self._access_token
+            self.access_token = auth_response.token
         else:
             error_message = f"Failed to fetch access token. Response: {auth_response.message}"
             raise AuthenticationError(error_message)

@@ -6,28 +6,22 @@ kiwoom.stock_information.client
 This module implements the Kiwoom stock information API client.
 """
 
-from typing import Optional
+from typing import TYPE_CHECKING
 
-from ..core import KiwoomBaseClient
 from ..exceptions import KiwoomAPIError
 from .models import StockInfo
+
+if TYPE_CHECKING:
+    from ..client import KiwoomClient
+
 
 class StockInformationClient:
     """
     Client for Kiwoom stock information API.
     """
 
-    def __init__(self, core_client: KiwoomBaseClient, access_token: str):
-        self.core = core_client
-        self._access_token = access_token
-
-    @property
-    def _auth_headers(self) -> dict:
-        if not self._access_token:
-            raise KiwoomAPIError("Access token is not set.")
-        return {
-            "authorization": f"Bearer {self._access_token}",
-        }
+    def __init__(self, client: "KiwoomClient"):
+        self.client = client
 
     async def get_stock_basic_info(self, stock_code: str) -> StockInfo:
         """
@@ -43,10 +37,10 @@ class StockInformationClient:
             KiwoomAPIError: API 호출 실패 시 발생
         """
         path = "/api/dostk/stkinfo"
-        headers = {**self._auth_headers, "api-id": "ka10001"}
+        headers = {"api-id": "ka10001"}
         data = {"stk_cd": stock_code}
-        
-        response = await self.core._post(
+
+        response = await self.client._authenticated_post(
             path, response_model=StockInfo, headers=headers, json=data
         )
 
