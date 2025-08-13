@@ -14,7 +14,8 @@ from dotenv import load_dotenv
 
 from .core import KiwoomBaseClient
 from .exceptions import AuthenticationError
-from .models import AuthResponse, StockInfo # Removed AccessToken and APIResponse
+from .models import AuthResponse
+from .stock_information.client import StockInformationClient
 
 
 class KiwoomClient:
@@ -59,6 +60,9 @@ class KiwoomClient:
             client=self._client,
             websocket_url=websocket_url,
         )
+        self.stock_information = StockInformationClient(
+            core_client=self.core, access_token=self._access_token
+        )
 
     @property
     def _auth_headers(self) -> dict:
@@ -88,7 +92,7 @@ class KiwoomClient:
         data = {
             "grant_type": "client_credentials",
             "appkey": self.app_key,
-            "secretkey": self.app_secret, # Changed from appsecret to secretkey
+            "secretkey": self.app_secret,
         }
 
         auth_response = await self.core._post(
@@ -96,23 +100,11 @@ class KiwoomClient:
         )
         if auth_response.return_code == 0 and auth_response.token:
             self._access_token = auth_response.token
+            # Update access token for sub-clients
+            self.stock_information._access_token = self._access_token
         else:
             error_message = f"Failed to fetch access token. Response: {auth_response.message}"
             raise AuthenticationError(error_message)
-
-    async def ka10001(self, stock_code: str) -> StockInfo: # Changed return type
-        """주식기본정보요청"""
-        path = "/api/dostk/stkinfo"
-        headers = {**self._auth_headers, "api-id": "ka10001"}
-        data = {"stk_cd": stock_code}
-        return await self.core._post(
-            path, response_model=StockInfo, headers=headers, json=data # Changed response_model
-        )
-
-    async def get_stock_basic_info(self, stock_code: str) -> StockInfo: # Changed return type
-        """주식기본정보요청 (영문명)"""
-        return await self.ka10001(stock_code)
-
 
 async def main():
     """
@@ -126,7 +118,7 @@ async def main():
 
             samsung_stock_code = "005930"  # Samsung Electronics stock code
             print(f"Requesting basic stock info for {samsung_stock_code} (Samsung Electronics)...")
-            stock_info_response = await client.get_stock_basic_info(samsung_stock_code)
+            stock_info_response = await client.stock_information.get_stock_basic_info(samsung_stock_code)
 
             print("Stock Information:")
             print(f"  Stock Name: {stock_info_response.stock_name}")
